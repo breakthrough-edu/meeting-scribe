@@ -1,5 +1,7 @@
 # meeting-scribe
 
+![meeting-scribe workflow -- audio in, then a cleaned transcript, a visual canvas, and an AI summary out, all on your machine](assets/workflow.svg)
+
 Turn a meeting **audio file** into three artifacts, transcribing **locally** on your own machine (no cloud, no upload, no external transcription app):
 
 1. **A corrected transcript** (light-touch cleanup, speech features and code-switching preserved)

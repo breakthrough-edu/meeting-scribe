@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="646" viewBox="0 0 680 646" role="img">
+  <title>meeting-scribe workflow</title>
+  <desc>Audio in, transcribed locally with Whisper, Claude produces a transcript, a visual canvas and an AI summary, saved to your folder or Obsidian. All local.</desc>
+  <style>
+    :root{
+      --sans:-apple-system,system-ui,"Segoe UI",Roboto,"Inter",sans-serif;
+      --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",monospace;
+      --bg-page:#F2F2F7; --bg-board:#FFFFFF; --line:#E5E5EA; --line-strong:#D1D1D6;
+      --ink:#1D1D1F; --ink-3:#6E6E73; --ink-4:#AEAEB2; --blue:#0A6CFF; --amber:#9A6A00;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg-page:#161617; --bg-board:#1F1F22; --line:#343438; --line-strong:#48484C;
+        --ink:#F5F5F7; --ink-3:#98989D; --ink-4:#6C6C70; --blue:#0A84FF; --amber:#FFB340;
+      }
+    }
+    .page{fill:var(--bg-page)}
+    .board{fill:var(--bg-board);stroke:var(--line);stroke-width:1}
+    .dash{fill:none;stroke:var(--line-strong);stroke-width:1;stroke-dasharray:5 5}
+    .accent{fill:var(--blue)}
+    .rule{stroke:var(--line);stroke-width:1}
+    .arr{stroke:var(--ink-4);stroke-width:1.6;fill:none}
+    .kick{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;fill:var(--blue)}
+    .h1{font-family:var(--sans);font-size:23px;font-weight:700;fill:var(--ink)}
+    .strap{font-family:var(--sans);font-size:13px;font-weight:400;fill:var(--ink-3)}
+    .bt{font-family:var(--sans);font-size:15px;font-weight:600;fill:var(--ink)}
+    .bs{font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.01em;fill:var(--ink-3)}
+    .clbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.16em;fill:var(--ink-4)}
+    .ct{font-family:var(--sans);font-size:14px;font-weight:600;fill:var(--ink)}
+    .cs{font-family:var(--mono);font-size:10.5px;font-weight:500;fill:var(--ink-3)}
+    .foot{font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.1em;fill:var(--ink-4)}
+    .ink-blue{fill:var(--blue)}
+    .ink-amber{fill:var(--amber)}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect class="page" x="0" y="0" width="680" height="646" rx="18"/>
+
+  <text class="kick" x="340" y="44" text-anchor="middle">MEETING-SCRIBE &#183; HOW IT WORKS</text>
+  <text class="h1" x="340" y="76" text-anchor="middle">From recording to ready-to-read</text>
+  <text class="strap" x="340" y="100" text-anchor="middle">Transcribed locally. Three files out. Nothing leaves your machine.</text>
+
+  <g>
+    <rect class="board" x="120" y="126" width="440" height="58" rx="11"/>
+    <rect class="accent" x="124" y="137" width="3" height="36" rx="1.5"/>
+    <text class="bt" x="146" y="151">Drop a meeting recording</text>
+    <text class="bs" x="146" y="170">.wav &#183; .mp3 &#183; .m4a &#183; .txt</text>
+  </g>
+  <line class="arr" x1="340" y1="188" x2="340" y2="212" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect class="board" x="120" y="216" width="440" height="58" rx="11"/>
+    <rect class="accent" x="124" y="227" width="3" height="36" rx="1.5"/>
+    <text class="bt" x="146" y="241">Transcribe locally with Whisper</text>
+    <text class="bs" x="146" y="260">whisperkit &#183; faster-whisper &#183; whisper.cpp</text>
+  </g>
+  <line class="arr" x1="340" y1="278" x2="340" y2="302" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect class="board" x="120" y="306" width="440" height="58" rx="11"/>
+    <rect class="accent" x="124" y="317" width="3" height="36" rx="1.5"/>
+    <text class="bt" x="146" y="331">Claude reads it, adds your context</text>
+    <text class="bs" x="146" y="350">classify &#183; ground &#183; analyze</text>
+  </g>
+  <line class="arr" x1="340" y1="368" x2="340" y2="392" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect class="dash" x="96" y="396" width="488" height="100" rx="12"/>
+    <text class="clbl" x="112" y="414">THREE ARTIFACTS</text>
+    <rect class="board" x="112" y="426" width="144" height="56" rx="9"/>
+    <text class="ct ink-blue" x="184" y="450" text-anchor="middle">Transcript</text>
+    <text class="cs" x="184" y="468" text-anchor="middle">.md &#183; cleaned</text>
+    <rect class="board" x="268" y="426" width="144" height="56" rx="9"/>
+    <text class="ct ink-amber" x="340" y="450" text-anchor="middle">Canvas</text>
+    <text class="cs" x="340" y="468" text-anchor="middle">.html &#183; visual</text>
+    <rect class="board" x="424" y="426" width="144" height="56" rx="9"/>
+    <text class="ct ink-blue" x="496" y="450" text-anchor="middle">Summary</text>
+    <text class="cs" x="496" y="468" text-anchor="middle">.md &#183; AI insights</text>
+  </g>
+  <line class="arr" x1="340" y1="500" x2="340" y2="524" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect class="board" x="120" y="528" width="440" height="58" rx="11"/>
+    <rect class="accent" x="124" y="539" width="3" height="36" rx="1.5"/>
+    <text class="bt" x="146" y="553">Saved to your folder or Obsidian</text>
+    <text class="bs" x="146" y="572">review &#183; edit in place</text>
+  </g>
+
+  <line class="rule" x1="120" y1="606" x2="560" y2="606"/>
+  <text class="foot" x="340" y="626" text-anchor="middle">100% LOCAL &#183; CROSS-PLATFORM &#183; CONFIG-DRIVEN</text>
+</svg>
