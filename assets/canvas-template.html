@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q3 Launch Readiness Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<script>(function(){try{var t=localStorage.getItem('canvas-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<style>
+  :root{
+    /* Ground */
+    --bg-page:#F2F2F7;          /* full-width canvas ground */
+    --bg-board:#FFFFFF;
+    --bg-sunken:#FBFBFD;        /* sunken module wells */
+    --bg-chip:#F5F5F7;
+
+    /* Hairlines */
+    --line:#E5E5EA;
+    --line-strong:#D8D8DD;
+
+    /* Ink */
+    --ink:#1D1D1F;             /* primary text */
+    --ink-2:#3A3A3C;           /* secondary */
+    --ink-3:#6E6E73;           /* tertiary / labels */
+    --ink-4:#8E8E93;           /* quaternary / meta */
+
+    /* Accent -- one refined system blue + graphite */
+    --blue:#0A6CFF;
+    --blue-soft:#EAF2FF;
+    --blue-line:#CFE0FF;
+    --graphite:#48484A;
+
+    /* Human / tension -- warm amber-graphite, used sparingly */
+    --amber:#9A6A00;
+    --amber-soft:#FBF3E2;
+    --amber-line:#EBDBB4;
+
+    /* Risk red -- restrained */
+    --red:#B3261E;
+    --red-soft:#FBEDEC;
+    --red-line:#F0D2CF;
+
+    --radius:14px;
+    --radius-sm:10px;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 28px rgba(0,0,0,.06);
+
+    --mono:"JetBrains Mono", "SF Mono", ui-monospace, "Roboto Mono", monospace;
+    --sans:"Inter", "PingFang SC", "Noto Sans SC", -apple-system, system-ui, "Segoe UI", sans-serif;
+    color-scheme:light;
+  }
+
+  /* ============ Dark theme ============ */
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg-page:#161617;
+    --bg-board:#1F1F22;
+    --bg-sunken:#18181A;
+    --bg-chip:#2A2A2E;
+    --line:#343438;
+    --line-strong:#45454B;
+    --ink:#F5F5F7;
+    --ink-2:#C9C9CE;
+    --ink-3:#98989E;
+    --ink-4:#79797F;
+    --blue:#0A84FF;
+    --blue-soft:rgba(10,132,255,.16);
+    --blue-line:rgba(10,132,255,.36);
+    --graphite:#98989E;
+    --amber:#FFB340;
+    --amber-soft:rgba(255,179,64,.14);
+    --amber-line:rgba(255,179,64,.30);
+    --red:#FF6961;
+    --red-soft:rgba(255,105,97,.15);
+    --red-line:rgba(255,105,97,.34);
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 32px rgba(0,0,0,.5);
+  }
+
+  /* ============ Theme toggle ============ */
+  .theme-toggle{
+    position:fixed; top:18px; right:18px; z-index:50;
+    width:40px; height:40px; border-radius:999px;
+    border:1px solid var(--line); background:var(--bg-board);
+    color:var(--ink-2); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:var(--shadow);
+    transition:background .25s ease, color .2s ease, border-color .2s ease;
+    -webkit-backdrop-filter:saturate(180%) blur(12px); backdrop-filter:saturate(180%) blur(12px);
+  }
+  .theme-toggle:hover{border-color:var(--line-strong); color:var(--ink);}
+  .theme-toggle:active{transform:scale(.94);}
+  .theme-toggle svg{width:19px; height:19px; display:none;}
+  :root[data-theme="dark"] .theme-toggle .ic-sun{display:block;}
+  :root:not([data-theme="dark"]) .theme-toggle .ic-moon{display:block;}
+  @media print{.theme-toggle{display:none;}}
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--bg-page);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    padding:48px 24px 72px;
+  }
+
+  .board{
+    max-width:960px;
+    margin:0 auto;
+  }
+
+  /* ============ Monospace utility ============ */
+  .mono{font-family:var(--mono); font-feature-settings:"tnum" 1, "lnum" 1; letter-spacing:-.01em;}
+  .kicker{
+    font-family:var(--mono);
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-4);
+  }
+
+  /* ============ Header ============ */
+  header{
+    margin-bottom:28px;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding-bottom:18px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:22px;
+  }
+  .doc-id{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:var(--mono);
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:.06em;
+    color:var(--ink-3);
+  }
+  .doc-id .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--blue);
+    box-shadow:0 0 0 3px var(--blue-soft);
+  }
+  .doc-type{
+    font-family:var(--mono);
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.05em;
+    color:var(--ink-3);
+    background:var(--bg-chip);
+    border:1px solid var(--line);
+    padding:5px 11px;
+    border-radius:999px;
+  }
+  h1{
+    font-size:38px;
+    line-height:1.12;
+    font-weight:700;
+    letter-spacing:-.022em;
+    margin:0 0 16px;
+    color:var(--ink);
+  }
+  .meta{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px 0;
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--ink-3);
+  }
+  .meta .seg{padding:0 14px; position:relative;}
+  .meta .seg:first-child{padding-left:0;}
+  .meta .seg + .seg::before{
+    content:"";
+    position:absolute; left:0; top:50%;
+    transform:translateY(-50%);
+    width:1px; height:12px;
+    background:var(--line-strong);
+  }
+  .meta .lbl{color:var(--ink-4); margin-right:7px;}
+  .meta .val{color:var(--ink-2); font-weight:500;}
+
+  /* ============ Section frame ============ */
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    margin:40px 0 16px;
+  }
+  .section-head .idx{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-4);
+    letter-spacing:.02em;
+  }
+  .section-head h2{
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--ink-3);
+    margin:0;
+    font-family:var(--mono);
+  }
+  .section-head .rule{
+    flex:1;
+    height:1px;
+    background:var(--line);
+    align-self:center;
+  }
+
+  /* ============ Metrics row ============ */
+  .metrics{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  .metric{
+    background:var(--bg-board);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 24px;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  .metric::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0;
+    width:3px;
+    background:var(--blue);
+  }
+  .metric .m-label{
+    font-family:var(--mono);
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-4);
+    margin-bottom:14px;
+  }
+  .metric .m-value{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    font-family:var(--mono);
+    font-weight:700;
+    letter-spacing:-.02em;
+    color:var(--ink);
+  }
+  .metric .m-num{font-size:34px; line-height:1;}
+  .metric .m-unit{font-size:16px; color:var(--ink-3); font-weight:600;}
+  .metric .m-note{
+    margin-top:12px;
+    font-size:13px;
+    color:var(--ink-3);
+    line-height:1.5;
+  }
+  .tag{
+    display:inline-flex;
+    align-items:center;
+    font-family:var(--mono);
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    padding:3px 8px;
+    border-radius:6px;
+    vertical-align:middle;
+  }
+  .tag-pending{
+    color:var(--amber);
+    background:var(--amber-soft);
+    border:1px solid var(--amber-line);
+  }
+  .tag-est{
+    color:var(--ink-3);
+    background:var(--bg-chip);
+    border:1px solid var(--line);
+  }
+
+  /* ============ Themes ============ */
+  .themes{
+    display:grid;
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .theme{
+    background:var(--bg-board);
+    padding:22px 24px;
+    display:grid;
+    grid-template-columns:44px 1fr;
+    gap:18px;
+  }
+  .theme .t-no{
+    font-family:var(--mono);
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink-4);
+    padding-top:2px;
+  }
+  .theme .t-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:4px;
+  }
+  .theme .t-title{
+    font-size:18px;
+    font-weight:600;
+    letter-spacing:-.01em;
+    color:var(--ink);
+  }
+  .theme .t-sub{
+    font-size:14.5px;
+    color:var(--ink-3);
+    margin-bottom:14px;
+  }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:var(--mono);
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  .badge::before{
+    content:"";
+    width:6px;height:6px;border-radius:50%;
+  }
+  .badge-structural{
+    color:var(--blue);
+    background:var(--blue-soft);
+    border:1px solid var(--blue-line);
+  }
+  .badge-structural::before{background:var(--blue);}
+  .badge-human{
+    color:var(--amber);
+    background:var(--amber-soft);
+    border:1px solid var(--amber-line);
+  }
+  .badge-human::before{background:var(--amber);}
+
+  .points{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:grid;
+    gap:9px;
+  }
+  .points li{
+    position:relative;
+    padding-left:20px;
+    font-size:15px;
+    color:var(--ink-2);
+    line-height:1.55;
+  }
+  .points li::before{
+    content:"";
+    position:absolute;
+    left:2px; top:9px;
+    width:5px; height:5px;
+    border-radius:1.5px;
+    background:var(--blue);
+  }
+  .theme.is-human .points li::before{background:var(--amber);}
+
+  /* Quote */
+  .quote{
+    margin-top:16px;
+    background:var(--amber-soft);
+    border:1px solid var(--amber-line);
+    border-left:3px solid var(--amber);
+    border-radius:var(--radius-sm);
+    padding:18px 20px;
+  }
+  .quote .q-mark{
+    font-family:Georgia, serif;
+    font-size:30px;
+    line-height:0;
+    color:var(--amber);
+    margin-right:4px;
+    vertical-align:-6px;
+    opacity:.6;
+  }
+  .quote p{
+    margin:0;
+    font-size:17px;
+    line-height:1.6;
+    color:var(--ink);
+    font-weight:500;
+    letter-spacing:-.005em;
+  }
+  .quote .q-by{
+    display:block;
+    margin-top:10px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    color:var(--amber);
+    text-transform:uppercase;
+  }
+
+  /* ============ Decisions ============ */
+  .decisions{
+    display:grid;
+    gap:12px;
+  }
+  .decision{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:16px;
+    background:var(--bg-board);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 20px;
+    box-shadow:var(--shadow);
+  }
+  .decision .d-no{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:700;
+    color:#fff;
+    background:var(--blue);
+    width:26px; height:26px;
+    border-radius:7px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .decision .d-text{
+    font-size:15.5px;
+    color:var(--ink);
+    line-height:1.5;
+  }
+  .decision .d-owner{
+    font-family:var(--mono);
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:.03em;
+    color:var(--ink-3);
+    background:var(--bg-chip);
+    border:1px solid var(--line);
+    padding:5px 11px;
+    border-radius:999px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+
+  /* ============ Action table ============ */
+  .table-wrap{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    background:var(--bg-board);
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:15px;
+  }
+  thead th{
+    text-align:left;
+    font-family:var(--mono);
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-4);
+    padding:13px 20px;
+    background:var(--bg-sunken);
+    border-bottom:1px solid var(--line);
+  }
+  thead th.col-idx{width:48px;}
+  thead th.col-owner{width:140px;}
+  thead th.col-due{width:118px;}
+  tbody td{
+    padding:15px 20px;
+    border-bottom:1px solid var(--line);
+    vertical-align:middle;
+    color:var(--ink);
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--bg-sunken);}
+  td.col-idx{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-4);
+  }
+  td.col-task{font-size:15px; line-height:1.45; color:var(--ink);}
+  td.col-owner .owner-pill{
+    font-family:var(--mono);
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink-2);
+    letter-spacing:.02em;
+  }
+  td.col-due{
+    font-family:var(--mono);
+    font-size:12.5px;
+    font-weight:600;
+    letter-spacing:.02em;
+  }
+  .due-near{color:var(--blue);}
+  .due-next{color:var(--ink-2);}
+  .due-unset{color:var(--ink-4);}
+
+  /* ============ Open & Risk ============ */
+  .flags{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  .flag{
+    background:var(--bg-board);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px 22px;
+    box-shadow:var(--shadow);
+  }
+  .flag .f-label{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    font-family:var(--mono);
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:4px 10px;
+    border-radius:6px;
+    margin-bottom:13px;
+  }
+  .flag .f-label::before{
+    content:"";
+    width:6px; height:6px;
+    border-radius:50%;
+  }
+  .flag-open .f-label{
+    color:var(--ink-3);
+    background:var(--bg-chip);
+    border:1px solid var(--line);
+  }
+  .flag-open .f-label::before{background:var(--ink-4);}
+  .flag-risk .f-label{
+    color:var(--red);
+    background:var(--red-soft);
+    border:1px solid var(--red-line);
+  }
+  .flag-risk .f-label::before{background:var(--red);}
+  .flag .f-body{
+    font-size:15px;
+    line-height:1.55;
+    color:var(--ink-2);
+  }
+  .flag-risk{border-color:var(--red-line);}
+
+  /* ============ Footer ============ */
+  footer{
+    margin-top:44px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.04em;
+    color:var(--ink-4);
+  }
+  footer .legend{display:flex; gap:18px; align-items:center; flex-wrap:wrap;}
+  footer .lg{display:inline-flex; align-items:center; gap:7px;}
+  footer .lg .sw{width:9px; height:9px; border-radius:2.5px;}
+  footer .lg .sw.blue{background:var(--blue);}
+  footer .lg .sw.amber{background:var(--amber);}
+  footer .lg .sw.red{background:var(--red);}
+
+  /* ============ Responsive ============ */
+  @media (max-width:720px){
+    body{padding:32px 16px 56px;}
+    h1{font-size:30px;}
+    .metrics{grid-template-columns:1fr;}
+    .flags{grid-template-columns:1fr;}
+    .meta{flex-direction:column; align-items:flex-start;}
+    .meta .seg{padding:1px 0;}
+    .meta .seg + .seg::before{display:none;}
+    .decision{grid-template-columns:auto 1fr; }
+    .decision .d-owner{grid-column:2; justify-self:start;}
+    .theme{grid-template-columns:1fr; gap:10px;}
+    .theme .t-no{padding-top:0;}
+    thead th.col-owner,thead th.col-due,
+    td.col-owner,td.col-due{display:none;}
+    .mobile-meta{display:block;}
+  }
+  .mobile-meta{display:none; margin-top:6px; font-family:var(--mono); font-size:11.5px; color:var(--ink-3);}
+  .mobile-meta .sep{color:var(--ink-4); padding:0 6px;}
+</style>
+</head>
+<body>
+  <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle light or dark mode" title="Light / Dark">
+    <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+    <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.22 4.22l1.7 1.7M18.08 18.08l1.7 1.7M2 12h2.4M19.6 12H22M4.22 19.78l1.7-1.7M18.08 5.92l1.7-1.7"/></svg>
+  </button>
+  <div class="board">
+
+    <!-- ============ HEADER ============ -->
+    <header>
+      <div class="topbar">
+        <div class="doc-id"><span class="dot"></span>MEETING&nbsp;CANVAS&nbsp;/&nbsp;2026-05-08</div>
+        <div class="doc-type">internal strategic session</div>
+      </div>
+      <h1>Q3 Launch Readiness Review</h1>
+      <div class="meta">
+        <span class="seg"><span class="lbl">DATE</span><span class="val">2026-05-08</span></span>
+        <span class="seg"><span class="lbl">DURATION</span><span class="val">~38 min</span></span>
+        <span class="seg"><span class="lbl">PARTICIPANTS</span><span class="val">Alex, Priya</span></span>
+      </div>
+    </header>
+
+    <!-- ============ KEY NUMBERS ============ -->
+    <div class="section-head">
+      <span class="idx">01</span>
+      <h2>Key Numbers</h2>
+      <span class="rule"></span>
+    </div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="m-label">Launch Budget · Proposed</div>
+        <div class="m-value"><span class="m-num">40</span><span class="m-unit">K USD</span></div>
+        <div class="m-note">allocation method <span class="tag tag-pending">Pending</span></div>
+      </div>
+      <div class="metric">
+        <div class="m-label">Onboarding Gap · Backlog</div>
+        <div class="m-value"><span class="m-num">2&ndash;3</span><span class="m-unit">weeks (range)</span></div>
+        <div class="m-note">rough estimate <span class="tag tag-est">Est</span></div>
+      </div>
+    </div>
+
+    <!-- ============ THEMES ============ -->
+    <div class="section-head">
+      <span class="idx">02</span>
+      <h2>Themes</h2>
+      <span class="rule"></span>
+    </div>
+    <div class="themes">
+
+      <div class="theme">
+        <div class="t-no">01</div>
+        <div>
+          <div class="t-head">
+            <span class="t-title">Launch Date</span>
+            <span class="badge badge-structural">Structural</span>
+          </div>
+          <div class="t-sub">lock the go-live window</div>
+          <ul class="points">
+            <li>target window narrowed to a date both teams can hit</li>
+            <li>ship the core flow, defer the nice-to-haves to a fast-follow</li>
+            <li>final call after Priya confirms QA sign-off</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="theme">
+        <div class="t-no">02</div>
+        <div>
+          <div class="t-head">
+            <span class="t-title">Support Coverage</span>
+            <span class="badge badge-structural">Structural</span>
+          </div>
+          <div class="t-sub">staffing the launch week</div>
+          <ul class="points">
+            <li>onboarding and support handled by the success team directly</li>
+            <li>Sam's QA role still to be scoped</li>
+            <li>sync overall status with ops first</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="theme is-human">
+        <div class="t-no">03</div>
+        <div>
+          <div class="t-head">
+            <span class="t-title">Scope Tension</span>
+            <span class="badge badge-human">Human / Tension</span>
+          </div>
+          <div class="t-sub">not cutting features, re-sequencing them</div>
+          <div class="quote">
+            <p><span class="q-mark">&ldquo;</span>We're not killing the roadmap, relax -- we're just shipping it in a different order.</p>
+            <span class="q-by">Verbatim</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============ DECISIONS ============ -->
+    <div class="section-head">
+      <span class="idx">03</span>
+      <h2>Decisions</h2>
+      <span class="rule"></span>
+    </div>
+    <div class="decisions">
+      <div class="decision">
+        <div class="d-no">1</div>
+        <div class="d-text">Go-live scope handed to Priya to confirm; report back once QA signs off</div>
+        <div class="d-owner">Alex</div>
+      </div>
+      <div class="decision">
+        <div class="d-no">2</div>
+        <div class="d-text">Onboarding details handled by the success team directly, not routed through us</div>
+        <div class="d-owner">Alex</div>
+      </div>
+    </div>
+
+    <!-- ============ ACTION ITEMS ============ -->
+    <div class="section-head">
+      <span class="idx">04</span>
+      <h2>Action Items</h2>
+      <span class="rule"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-idx">#</th>
+            <th class="col-task">Task</th>
+            <th class="col-owner">Owner</th>
+            <th class="col-due">Due</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-idx">01</td>
+            <td class="col-task">Confirm the go-live date with Priya
+              <div class="mobile-meta">Alex <span class="sep">·</span> this week</div>
+            </td>
+            <td class="col-owner"><span class="owner-pill">Alex</span></td>
+            <td class="col-due"><span class="due-near">this week</span></td>
+          </tr>
+          <tr>
+            <td class="col-idx">02</td>
+            <td class="col-task">Scope Sam's QA responsibilities
+              <div class="mobile-meta">Priya <span class="sep">·</span> unspecified</div>
+            </td>
+            <td class="col-owner"><span class="owner-pill">Priya</span></td>
+            <td class="col-due"><span class="due-unset">unspecified</span></td>
+          </tr>
+          <tr>
+            <td class="col-idx">03</td>
+            <td class="col-task">Sync overall status with ops
+              <div class="mobile-meta">Team <span class="sep">·</span> next week</div>
+            </td>
+            <td class="col-owner"><span class="owner-pill">Team</span></td>
+            <td class="col-due"><span class="due-next">next week</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============ OPEN & RISK ============ -->
+    <div class="section-head">
+      <span class="idx">05</span>
+      <h2>Open &amp; Risk</h2>
+      <span class="rule"></span>
+    </div>
+    <div class="flags">
+      <div class="flag flag-open">
+        <span class="f-label">Open</span>
+        <div class="f-body">Whether the partner team still intends to join the launch is unclear</div>
+      </div>
+      <div class="flag flag-risk">
+        <span class="f-label">Risk</span>
+        <div class="f-body">The 40K budget has no agreed allocation method, easy to slip into an empty promise</div>
+      </div>
+    </div>
+
+    <!-- ============ FOOTER ============ -->
+    <footer>
+      <div class="legend">
+        <span class="lg"><span class="sw blue"></span>Structural / Settled</span>
+        <span class="lg"><span class="sw amber"></span>Human / Tension</span>
+        <span class="lg"><span class="sw red"></span>Risk</span>
+      </div>
+      <div>Q3 Launch Readiness Review · 38 min</div>
+    </footer>
+
+  </div>
+  <script>
+  (function(){
+    var btn=document.getElementById('themeToggle');
+    if(!btn)return;
+    btn.addEventListener('click',function(){
+      var dark=document.documentElement.getAttribute('data-theme')==='dark';
+      var next=dark?'light':'dark';
+      document.documentElement.setAttribute('data-theme',next);
+      try{localStorage.setItem('canvas-theme',next);}catch(e){}
+    });
+  })();
+  </script>
+</body>
+</html>
