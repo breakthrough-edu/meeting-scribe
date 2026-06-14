@@ -55,7 +55,8 @@ cat ~/.config/meeting-transcripts/config.json
     "replies": "english",
     "register": null
   },
-  "vault_context_skill": null
+  "vault_context_skill": null,
+  "diarization": { "enabled": false, "num_speakers": null, "seg_model": null, "emb_model": null }
 }
 ```
 
@@ -70,11 +71,12 @@ Field notes:
 - `engine_bin` -- optional absolute path to the engine binary (`whisperkit-cli` or `whisper-cli`); `null` = found on PATH.
 - `python_bin` -- (faster-whisper only) absolute path to the Python inside the venv where `faster-whisper` is installed.
 - `compute_type` -- (faster-whisper only) `auto` (int8 on CPU, float16 on CUDA) or force one of `int8`, `int8_float16`, `float16`, `float32`.
-- `transcribe_language` -- Whisper language hint (`auto`, `zh`, `en`, ...). For code-switched audio, set the dominant language for stabler output.
+- `transcribe_language` -- Whisper language hint (`auto`, `zh`, `en`, ...). For code-switched audio, **set the dominant language rather than `auto`**: forced single-language decoding keeps inline foreign terms verbatim and gives higher-confidence, stabler output. On whisperkit-cli, `auto` was observed to add a mid-clip language-flip hallucination (a spurious German tail); on faster-whisper a real-audio test found `auto` harmless but lower-confidence (it stayed on the dominant language correctly) -- forcing the dominant language is the safer default either way. Use `auto` only when the dominant language is genuinely unknown.
 - `audio_dropzone` / `audio_archive` -- where new audio lands, and where it (plus its `.txt`) is moved after successful processing.
 - `output.mode` -- **`folder`** (write artifacts to `folder_path` via filesystem) or **`obsidian`** (write into an Obsidian vault via the mcp-obsidian tools; uses `vault_path`, `landing_folder`, optional `baseline_context_file`).
 - `language.*` -- output language per artifact. `transcript: as-spoken` keeps the spoken language(s) intact. `register` is an optional free-text style note (e.g. a regional register).
 - `vault_context_skill` -- optional name of a companion skill that supplies vault/notes grounding; load it alongside this one if set. `null` = none.
+- `diarization` -- optional speaker separation, **OFF by default** (opt-in). When `enabled: true`, Phase 0 produces a speaker-tagged transcript in the unified format `[mm:ss] Speaker A: <text>`; set `num_speakers` to the known participant count (or leave `null` to auto-detect). `seg_model` / `emb_model` are the local ONNX model paths for the `faster-whisper` diarization add-on (set during the optional diarization setup below; unused by `whisperkit-cli`, which has native diarization). **No Hugging Face token is required for any engine's diarization.** Diarization is **turn-level** (not word-level), labels are arbitrary `A` / `B` (not names), and it is verified only on clean low-overlap 2-speaker audio -- keep it opt-in, do not rely on it for attribution. Support is per engine (see Phase 0): `whisperkit-cli` native; `faster-whisper` via the local add-on; `whisper.cpp` not supported.
 
 ### First-run setup (only when config is absent)
 
@@ -97,20 +99,31 @@ Run once, interactively, in the replies language. Keep it tight.
 
 3. **Download the model in the engine's format** (default `model` = `large-v3`). Ask where to keep models (offer `$HOME/.config/meeting-transcripts/models`); the formats are NOT interchangeable, so download the one matching the chosen engine:
    - **`whisperkit-cli`** (CoreML) -- `whisperkit-cli transcribe --model large-v3 --download-model-path "<dir>"` fetches ~1.5 GB. The CLI nests a subfolder; set `model_path` to the folder that actually holds the `.mlmodelc` bundles (locate with `find "<dir>" -name AudioEncoder.mlmodelc`), not `<dir>` itself, and validate those bundles.
-   - **`faster-whisper`** (CT2) -- write the wrapper (step 4), then warm it once to download into `model_path`: `"<python_bin>" "$HOME/.config/meeting-transcripts/fw_transcribe.py" --warm large-v3 "<model_path>" auto` (~1.5 GB). Validate the cache folder is non-empty.
+   - **`faster-whisper`** (CT2) -- warm the bundled wrapper once to download into `model_path`: `"<python_bin>" "<skill-dir>/scripts/fw_transcribe.py" --warm large-v3 "<model_path>" auto` (~1.5 GB). Validate the cache folder is non-empty.
    - **`whisper.cpp`** (GGML) -- download a single `.bin`, e.g. `curl -L -o "<dir>/ggml-large-v3.bin" https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin` (~3 GB); set `model_path` to that file and confirm it exists.
 
-4. **(faster-whisper only) Write the wrapper** to `$HOME/.config/meeting-transcripts/fw_transcribe.py` (source in Phase 0). It is tiny and lives next to the config so a skill update never clobbers it.
+4. **Output destination.** Ask: plain **folder** (default) or **Obsidian vault**. Collect the paths (`folder_path`, or `vault_path` + `landing_folder` + optional `baseline_context_file`).
 
-5. **Output destination.** Ask: plain **folder** (default) or **Obsidian vault**. Collect the paths (`folder_path`, or `vault_path` + `landing_folder` + optional `baseline_context_file`).
+5. **Audio folders.** Ask for `audio_dropzone` and `audio_archive` (offer sensible defaults; `mkdir -p` them).
 
-6. **Audio folders.** Ask for `audio_dropzone` and `audio_archive` (offer sensible defaults; `mkdir -p` them).
+6. **Language.** `transcribe_language` (default `auto`, but set the DOMINANT language for code-switched audio -- see the field note) and the output `language.*` (default `english`, `transcript` = `as-spoken`); optional `register`.
 
-7. **Language.** `transcribe_language` (default `auto`) and the output `language.*` (default `english`, `transcript` = `as-spoken`); optional `register`.
+7. **Write** `~/.config/meeting-transcripts/config.json` (`mkdir -p ~/.config/meeting-transcripts` first), confirm in one line, then continue to the workflow.
 
-8. **Write** `~/.config/meeting-transcripts/config.json` (`mkdir -p ~/.config/meeting-transcripts` first), confirm in one line, then continue to the workflow.
+**Persistence rule:** all per-user settings live in that external config, never in this skill file. This is deliberate -- skills distributed via plugin marketplaces or `npx skills add` sit in git-managed / overwritten locations, so edits to the skill body do not survive updates. The external config does. Whenever a setting changes, update the config file, not this document. (Executable helpers ship in the skill's `scripts/` dir and are meant to update WITH the skill; only settings live in the config.)
 
-**Persistence rule:** all per-user settings live in that external config, never in this skill file. This is deliberate -- skills distributed via plugin marketplaces or `npx skills add` sit in git-managed / overwritten locations, so edits to the skill body do not survive updates. The external config does. Whenever a setting changes, update the config file, not this document.
+### Enabling speaker diarization (optional, no Hugging Face token)
+
+Diarization is OFF by default. To turn it on, set `config.diarization.enabled = true` (and `num_speakers` if you know the count, else leave `null` to auto-detect), then:
+
+- **`whisperkit-cli`** -- nothing extra; the first diarized run downloads a diarization model from Hugging Face automatically (no token).
+- **`faster-whisper`** -- a small one-time **local add-on** (all models are public, **no token**):
+  1. Install into the same venv: `VIRTUAL_ENV="$HOME/.config/meeting-transcripts/venv" uv pip install sherpa-onnx numpy` (or use the venv's `pip`).
+  2. Download the two non-gated ONNX models into `$HOME/.config/meeting-transcripts/dia-models/`:
+     - segmentation (~6 MB): `https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2` (un-tar; the model is the inner `.../model.onnx`).
+     - speaker embedding (~38 MB): `https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx` (note the upstream release tag is spelled `speaker-recongition-models`).
+  3. Set `config.diarization.seg_model` and `config.diarization.emb_model` to those two paths.
+- **`whisper.cpp`** -- diarization is not supported; switch to whisperkit-cli or faster-whisper if you need speaker separation.
 
 ## Role
 
@@ -170,41 +183,19 @@ Artifacts are generated and written **directly to the configured destination**, 
      --audio-path "<audio>" \
      --model-path "<config.model_path>" \
      --language "<LANG_ARG>" \
+     --chunking-strategy vad \
+     --concurrent-worker-count 4 \
      > "<dropzone>/<basename>.txt" 2> "$LOG"
    ```
+   - `--chunking-strategy vad` (segment on voice activity) + `--concurrent-worker-count` (parallel chunk decode) is the long-audio throughput default: a 2 h file runs in roughly 3 min (~14x realtime) and segmentation improves. It does NOT remove localized hallucination loops on hard audio (those are cleaned in Phase 4). Tune the worker count to the machine.
 
-   **`faster-whisper`** (cross-platform default). Uses the wrapper at `~/.config/meeting-transcripts/fw_transcribe.py` (written during first-run setup; if absent, write it from the source below). faster-whisper decodes most formats directly, no ffmpeg needed:
+   **`faster-whisper`** (cross-platform default). Calls the bundled wrapper `<skill-dir>/scripts/fw_transcribe.py` with the venv Python (`config.python_bin`); faster-whisper decodes most formats directly, no ffmpeg needed:
    ```bash
-   "<config.python_bin>" "$HOME/.config/meeting-transcripts/fw_transcribe.py" \
+   "<config.python_bin>" "<skill-dir>/scripts/fw_transcribe.py" \
      "<audio>" "<config.model>" "<config.model_path>" "<LANG_ARG>" "<config.compute_type>" \
      > "<dropzone>/<basename>.txt" 2> "$LOG"
    ```
-   Wrapper source (`fw_transcribe.py`) -- write verbatim:
-   ```python
-   #!/usr/bin/env python3
-   # meeting-scribe faster-whisper wrapper.
-   #   transcribe: <audio> <model> <model_cache> <lang|auto> <compute|auto>
-   #   warm:       --warm <model> <model_cache> <compute|auto>
-   import sys
-   from faster_whisper import WhisperModel
-
-   def load(model, cache, compute):
-       ct = "int8" if compute in ("auto", "", None) else compute
-       return WhisperModel(model, device="auto", compute_type=ct, download_root=cache)
-
-   if len(sys.argv) > 1 and sys.argv[1] == "--warm":
-       load(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "auto")
-       print("OK", file=sys.stderr); sys.exit(0)
-
-   audio, model, cache = sys.argv[1], sys.argv[2], sys.argv[3]
-   lang = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] != "auto" else None
-   compute = sys.argv[5] if len(sys.argv) > 5 else "auto"
-   m = load(model, cache, compute)
-   segments, info = m.transcribe(audio, language=lang)
-   print("[detected] %s p=%.2f" % (info.language, info.language_probability), file=sys.stderr)
-   for s in segments:
-       print(s.text.strip())
-   ```
+   `<skill-dir>` is this skill's install directory (provided when the skill loads); the wrapper ships in `scripts/` and updates with the skill. No decode-level levers are applied: a lever sweep on real loop-prone audio found faster-whisper large-v3 does NOT loop or truncate the way whisperkit can, so `initial_prompt` (risked injecting primed words), `no_repeat_ngram_size` (no loop to suppress) and `vad_filter` (speed only) add risk or speed, not accuracy. Loop and brand cleanup happen engine-agnostically in Phase 4.
 
    **`whisper.cpp`** (optional binary). Wants 16 kHz mono WAV, so pipe through ffmpeg first:
    ```bash
@@ -216,6 +207,25 @@ Artifacts are generated and written **directly to the configured destination**, 
 
    - **Long audio** (roughly > 20 min or > 30 MB): run the transcription as a background Bash job and poll for completion rather than blocking, to avoid command timeouts. On CPU, faster-whisper and whisper.cpp are slower than the Apple Neural Engine, so budget more time and lean on the background+poll path.
    - First run of an engine may fetch a tokenizer / model shard from Hugging Face; this is expected.
+
+   **Speaker diarization (opt-in -- only when `config.diarization.enabled` is true).** Goal: ONE unified, engine-agnostic output, `[mm:ss] Speaker A: <text>` lines sorted by time, so nothing downstream branches on engine for speaker handling. Pass `config.diarization.num_speakers` when the participant count is known. Caveats to carry into any user-facing note: turn-level not word-level; labels are arbitrary `A` / `B` (not names -- map them in Phase 4 if grounding makes it clear); verified only on clean, low-overlap 2-speaker audio (overlap / 3+ speakers / auto-count untested). Per engine:
+
+   - **`whisperkit-cli`:** add `--diarization --diarization-num-speakers <N>` to the transcribe command above and send stdout to `<dropzone>/<basename>.raw.txt` (not `.txt`). whisperkit appends a `---- Speaker Diarization Results ----` block (NIST RTTM, with transcript tokens packed into the ortho field) to stdout; its `--report` is non-functional for this, so you MUST capture stdout. Convert to the unified format with the bundled parser:
+     ```bash
+     python3 "<skill-dir>/scripts/parse_diarization.py" "<dropzone>/<basename>.raw.txt" > "<dropzone>/<basename>.txt"
+     ```
+     Run diarization in ONE call over the whole file. The first-ever run may download an HF diarization model -- allow a few minutes, watch the log.
+   - **`faster-whisper`:** no native diarization; meeting-scribe adds it via a **token-free local add-on** (sherpa-onnx + two public ONNX models -- see "Enabling speaker diarization" above). When `config.diarization.seg_model` and `emb_model` are set, convert the source to 16 kHz mono WAV first, then call the bundled merge wrapper (it transcribes with faster-whisper, diarizes with sherpa-onnx, and emits the unified format directly):
+     ```bash
+     ffmpeg -nostdin -loglevel error -y -i "<audio>" -ar 16000 -ac 1 "${TMPDIR:-/tmp}/<basename>.16k.wav"
+     "<config.python_bin>" "<skill-dir>/scripts/fw_diarize.py" \
+       "${TMPDIR:-/tmp}/<basename>.16k.wav" "<config.model>" "<config.model_path>" \
+       "<LANG_ARG>" "<config.compute_type>" "<config.diarization.num_speakers or 0>" \
+       "<config.diarization.seg_model>" "<config.diarization.emb_model>" \
+       > "<dropzone>/<basename>.txt" 2> "$LOG"
+     ```
+     If the add-on is not set up (`seg_model` / `emb_model` are null), fall back to the non-diarized command above. (Validated token-free on a 2-speaker clip: correct A/B attribution + auto speaker-count.)
+   - **`whisper.cpp`:** no real diarization (`--tdrz` / tinydiarize is experimental, 2-speaker only). **Not supported** here -- ignore `diarization.enabled`, produce the normal non-diarized transcript, and tell the user to switch engine (whisperkit-cli or faster-whisper) if they need speaker separation.
 4. **Confirm** the `.txt` was produced and is non-empty, then proceed to Phase 1 using it. On failure, surface the tail of the stderr log and stop.
 
 The source audio is archived together with its `.txt` at the end of Phase 4 (after all artifacts succeed), not here.
@@ -280,8 +290,10 @@ If a target file already exists, ask before overwriting (rerun case).
 
 - Frontmatter: `type: meeting-transcript`, `meeting`, `date`, `participants`, `source_file`, plus any grounding links.
 - Fix proper nouns using grounding context first, then general context. Fix obvious mistranscriptions where context makes the word unambiguous.
+- **Brand / tool-name correction map.** Whisper mis-hears common AI/tech names; fix them here deterministically (this is the chosen substitute for source-level prompt biasing). Known mis-hearings -> correct, applied only when context makes the AI/tech meaning unambiguous: `quad` / `clock` / `Clock` -> Claude; `clock code` -> Claude Code; `AI tip` / `cheggbd` -> ChatGPT; `entropic` -> Anthropic. The exact garbling is render-dependent (engine- and model-specific; e.g. on Mandarin-accented audio `clock` is by far the most common Claude garble), so treat this as a GROWING dictionary, not a fixed list -- add new mis-hearings as you confirm them.
 - Preserve speech features: fillers, false starts, repetitions, trailing thoughts, code-switching exactly as transcribed.
-- Speaker labels: keep as transcribed, OR merge to real names when diarization clearly split / mislabelled one person (note the mapping in a one-line processing note at the top). Drop pure Whisper hallucination lines (foreign-language garbage from silence / cross-talk).
+- **Collapse Whisper repetition loops.** A token or short phrase repeated 4+ times in a row (e.g. `卖鸯子卖鸯子卖鸯子卖鸯子`, `找多更多找多更多`) is an ASR hallucination on hard audio, not real speech: collapse it to a single instance or drop it, and mark `[unclear]` if the underlying words cannot be recovered. This is distinct from genuine emphatic repetition (e.g. `对对对` / `是是是`, up to ~3x), which stays; only 4+ identical runs are treated as loops.
+- Speaker labels: if Phase 0 produced a diarized transcript (`[mm:ss] Speaker A/B: ...`), keep the turn structure and map the arbitrary `A` / `B` to real names where grounding context makes it clear (note the mapping in a one-line processing note at the top); diarization is turn-level, so a long first turn may swallow brief interjections -- split them back out only if obvious. Without diarization, keep speaker labels as transcribed and infer conservatively. Drop pure Whisper hallucination lines (foreign-language garbage from silence / cross-talk).
 - Timestamps: keep as they came.
 - Terms still uncertain after grounding -> mark inline `[unclear: best guess]`.
 - Light-touch only. Do NOT rewrite, smooth, or paraphrase.
@@ -292,6 +304,7 @@ If a target file already exists, ask before overwriting (rerun case).
 mkdir -p "<config.audio_archive>"
 mv "<source audio>" "<config.audio_archive>/"   # if an audio source existed
 mv "<dropzone>/<basename>.txt" "<config.audio_archive>/"
+mv "<dropzone>/<basename>.raw.txt" "<config.audio_archive>/" 2>/dev/null || true   # whisperkit diarized intermediate, if any
 ```
 
 **Then output a COMPACT chat report only** (the only user-visible artifact output), in the replies language:

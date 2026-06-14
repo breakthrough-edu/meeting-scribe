@@ -88,7 +88,8 @@ All per-user settings live in **one external file**, `~/.config/meeting-transcri
     "replies": "english",
     "register": null
   },
-  "vault_context_skill": null
+  "vault_context_skill": null,
+  "diarization": { "enabled": false, "num_speakers": null, "seg_model": null, "emb_model": null }
 }
 ```
 
@@ -98,9 +99,19 @@ To change any path, language, engine or model, edit that file -- not the skill.
 
 Output language is entirely yours to set, per artifact (`language.transcript / canvas / summary / replies`). The transcript defaults to `as-spoken`, which **preserves the spoken language(s) and code-switching exactly** (it will not translate, say, mixed Mandarin-English back into one language). The canvas and summary follow whatever you configure. The shipped worked example is in English purely as a neutral reference.
 
+## Speaker diarization (optional)
+
+Off by default. When you enable it (`diarization.enabled` in the config), the transcript comes out speaker-tagged as `[mm:ss] Speaker A: ...` / `[mm:ss] Speaker B: ...`, sorted by time. **No Hugging Face token is required on any engine.**
+
+- **Apple Silicon (whisperkit-cli)** -- native, nothing extra to install.
+- **faster-whisper** -- a small one-time local add-on (`pip install sherpa-onnx numpy` + two public ONNX models, ~45 MB total).
+- **whisper.cpp** -- not supported; use one of the other engines for speaker separation.
+
+Diarization is turn-level (not word-level) and labels are arbitrary (`A` / `B`, not names). It is verified on clean, low-overlap 2-speaker audio; overlap, 3+ speakers, and auto speaker-count are untested. Treat it as a convenience, not a source of truth for attribution.
+
 ## Privacy
 
-Everything runs on your machine. The audio, the transcript, and the artifacts never leave it. The only network access is a one-time model download from Hugging Face during setup, and loading web fonts when you open the canvas in a browser.
+Everything runs on your machine. The audio, the transcript, and the artifacts never leave it. The only network access is model downloads from Hugging Face (the base Whisper model during setup, plus a diarization model on first use if you enable diarization on whisperkit-cli), and loading web fonts when you open the canvas in a browser.
 
 ## Troubleshooting
 
@@ -108,6 +119,11 @@ Everything runs on your machine. The audio, the transcript, and the artifacts ne
 - **faster-whisper "command not found" / import errors** -- `python_bin` must point at the venv that has `faster-whisper` installed. Setup creates this at `~/.config/meeting-transcripts/venv`.
 - **whisper.cpp wants 16 kHz WAV** -- the skill pipes non-WAV through ffmpeg automatically; make sure ffmpeg is installed.
 - **Slow on CPU** -- `whisperkit-cli` (Apple Silicon) uses the Neural Engine and is fastest. On CPU, `faster-whisper` with `compute_type: "int8"` is the practical default; large files transcribe in the background.
+
+## Changelog
+
+- **v1.1 (accuracy upgrade)** -- opt-in **token-free** speaker diarization (whisperkit-cli native; faster-whisper via a local sherpa-onnx add-on; whisper.cpp unsupported); a brand / tool-name correction map (fixes common AI-name mis-hearings, e.g. `clock`->Claude, `entropic`->Anthropic); repetition-loop collapse for ASR hallucinations on hard audio; whisperkit long-audio throughput flags. Empirically validated on a real 2 h meeting recording: faster-whisper proved loop- and truncation-resistant, so no decode-level levers were adopted (the post-processing correction rules are the engine-agnostic win).
+- **v1.0** -- initial release: local cross-platform transcription (whisperkit-cli / faster-whisper / whisper.cpp) into a corrected transcript, a Precision Pro HTML canvas, and an AI-insight summary.
 
 ## License
 
