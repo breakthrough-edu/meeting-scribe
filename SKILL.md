@@ -98,7 +98,14 @@ Run once, interactively, in the replies language. Keep it tight.
    - **`whisper.cpp`** -- `command -v whisper-cli`; if missing, on mac `brew install whisper-cpp`, on Linux use the distro package or build from source (needs `cmake`), on Windows use a release binary or WSL. Set `engine_bin` if it is not on PATH.
 
 3. **Download the model in the engine's format** (default `model` = `large-v3`). Ask where to keep models (offer `$HOME/.config/meeting-transcripts/models`); the formats are NOT interchangeable, so download the one matching the chosen engine:
-   - **`whisperkit-cli`** (CoreML) -- `whisperkit-cli transcribe --model large-v3 --download-model-path "<dir>"` fetches ~1.5 GB. The CLI nests a subfolder; set `model_path` to the folder that actually holds the `.mlmodelc` bundles (locate with `find "<dir>" -name AudioEncoder.mlmodelc`), not `<dir>` itself, and validate those bundles.
+   - **`whisperkit-cli`** (CoreML) -- the current `whisperkit-cli` (it now identifies as `argmax-cli`) has **no standalone download command**, and `transcribe` errors out (`Either audioPath or audioFolder must be provided`) *before* downloading if given no audio. So trigger the ~1.5 GB fetch as a side effect of transcribing a 1-second silent WAV (this is why ffmpeg is required even though whisperkit decodes audio natively at run time):
+     ```bash
+     SILENCE="<dir>/.silence.wav"
+     ffmpeg -y -f lavfi -i anullsrc=r=16000:cl=mono -t 1 -ar 16000 -ac 1 "$SILENCE"
+     whisperkit-cli transcribe --audio-path "$SILENCE" --model large-v3 --download-model-path "<dir>"
+     rm -f "$SILENCE"
+     ```
+     The model lands NESTED at `<dir>/models/argmaxinc/whisperkit-coreml/<model-name>/`. Set `model_path` to that folder (the one that actually holds the `.mlmodelc` bundles), NOT `<dir>` itself -- locate it with `find "<dir>" -maxdepth 7 -name AudioEncoder.mlmodelc | grep -v '/.cache/'` (the `grep -v` skips the incomplete Hugging Face staging copy under `.cache/huggingface/download/`), then take its `dirname` and validate the bundles.
    - **`faster-whisper`** (CT2) -- warm the bundled wrapper once to download into `model_path`: `"<python_bin>" "<skill-dir>/scripts/fw_transcribe.py" --warm large-v3 "<model_path>" auto` (~1.5 GB). Validate the cache folder is non-empty.
    - **`whisper.cpp`** (GGML) -- download a single `.bin`, e.g. `curl -L -o "<dir>/ggml-large-v3.bin" https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin` (~3 GB); set `model_path` to that file and confirm it exists.
 
