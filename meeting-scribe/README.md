@@ -10,6 +10,8 @@ Turn a meeting **audio file** into three artifacts, transcribing **locally** on 
 
 It is a [Claude Code](https://claude.com/claude-code) skill. You drop an audio file into a folder, invoke the skill, and the three artifacts are written straight to your configured destination. Everything runs on-device with [Whisper](https://github.com/openai/whisper).
 
+Once you have a few processed meetings, a second entry point unlocks: **Insights mode**. Ask "what are my communication patterns across my meetings" (or "do I avoid conflict", "compare my Q1 vs Q2 meetings") and the skill analyzes your corpus of corrected transcripts -- conflict avoidance, speaking ratio, question quality, active listening, facilitation, whether commitments made in one meeting survive to the next -- and writes one evidence-cited report. Every claimed pattern needs 3+ quoted instances across 2+ meetings; it analyzes only you, never judges other participants.
+
 ## Install
 
 ```bash
@@ -122,6 +124,7 @@ Everything runs on your machine. The audio, the transcript, and the artifacts ne
 
 ## Changelog
 
+- **v1.2 (insights upgrade)** -- new **Insights mode**: cross-meeting communication-pattern analysis over your corpus of corrected transcripts (conflict avoidance & hedging with a code-switching-aware register guard, speaking ratio, question quality, active listening, facilitation & close discipline, cross-meeting commitment integrity, trend compare), producing one evidence-cited report (3+ instances across 2+ meetings before anything is called a pattern; verbatim quotes required; better-approach rewrites in your own voice). Also: the visual canvas gains an **AI Insights** section (amber-indexed analytical capstone mirroring the summary's insights, template updated).
 - **v1.1 (accuracy upgrade)** -- opt-in **token-free** speaker diarization (whisperkit-cli native; faster-whisper via a local sherpa-onnx add-on; whisper.cpp unsupported); a brand / tool-name correction map (fixes common AI-name mis-hearings, e.g. `clock`->Claude, `entropic`->Anthropic); repetition-loop collapse for ASR hallucinations on hard audio; whisperkit long-audio throughput flags. Empirically validated on a real 2 h meeting recording: faster-whisper proved loop- and truncation-resistant, so no decode-level levers were adopted (the post-processing correction rules are the engine-agnostic win).
 - **v1.0** -- initial release: local cross-platform transcription (whisperkit-cli / faster-whisper / whisper.cpp) into a corrected transcript, a Precision Pro HTML canvas, and an AI-insight summary.
 

@@ -1,6 +1,6 @@
 ---
 name: meeting-scribe
-description: Turn meeting audio into three artifacts -- a corrected transcript, an HTML visual canvas, and a Markdown summary with AI insights -- transcribing locally and cross-platform with Whisper (no cloud, no external transcription app). Runs on Apple Silicon mac via whisperkit-cli, on Intel mac / Windows / Linux via faster-whisper, or via whisper.cpp. MUST trigger when the user mentions a meeting transcript or recording, the audio drop-zone folder, processing / correcting / cleaning / fixing a transcript, transcribing an audio file, Whisper output, or generating meeting notes from a recording. Also trigger on Chinese phrasings -- 处理 transcript, 整理会议纪要, 修正 transcript, 清理 transcript, 修订 transcript, 转录纠错, 会议转写, 帮我做个会议总结, 把会议 transcript 处理一下, 处理一下昨天会议, 整理今天会议, 会议纪要, 转写文本, 把录音转成文字, 处理这个录音, 处理这个音频. Also trigger when the user drops an audio file (.wav / .mp3 / .m4a / .flac / .ogg ...) or a .txt transcript into the configured drop-zone folder. Behavior is driven entirely by a per-user config at ~/.config/meeting-transcripts/config.json (engine, model, paths, output destination, language); the skill runs a one-time first-run setup if that config is absent. Walks six gated phases -- transcription, silent bootstrap and file read, classification and context request, context loading, generate all three artifacts straight to the configured destination with no full-text chat echo, and an in-place review and edit loop. Preserves speech features and code-switching in the transcript; canvas and summary follow the configured output language.
+description: Turn meeting audio into three artifacts -- a corrected transcript, an HTML visual canvas, and a Markdown summary with AI insights -- transcribing locally and cross-platform with Whisper (no cloud, no external transcription app). Runs on Apple Silicon mac via whisperkit-cli, on Intel mac / Windows / Linux via faster-whisper, or via whisper.cpp. MUST trigger when the user mentions a meeting transcript or recording, the audio drop-zone folder, processing / correcting / cleaning / fixing a transcript, transcribing an audio file, Whisper output, or generating meeting notes from a recording. Also trigger on Chinese phrasings -- 处理 transcript, 整理会议纪要, 修正 transcript, 清理 transcript, 修订 transcript, 转录纠错, 会议转写, 帮我做个会议总结, 把会议 transcript 处理一下, 处理一下昨天会议, 整理今天会议, 会议纪要, 转写文本, 把录音转成文字, 处理这个录音, 处理这个音频. Also trigger when the user drops an audio file (.wav / .mp3 / .m4a / .flac / .ogg ...) or a .txt transcript into the configured drop-zone folder. Behavior is driven entirely by a per-user config at ~/.config/meeting-transcripts/config.json (engine, model, paths, output destination, language); the skill runs a one-time first-run setup if that config is absent. Walks six gated phases -- transcription, silent bootstrap and file read, classification and context request, context loading, generate all three artifacts straight to the configured destination with no full-text chat echo, and an in-place review and edit loop. Preserves speech features and code-switching in the transcript; canvas and summary follow the configured output language. ALSO trigger for cross-meeting Insights mode -- when the user asks to analyze their communication patterns ACROSS meetings rather than process one recording: meeting insights, communication patterns, analyze my meetings, how do I come across in meetings, do I avoid conflict, 分析我的沟通模式, 我开会的表现怎样, 复盘我最近的会议, 跨会议分析, compare my meetings between two periods. Insights mode reads the existing corrected transcripts and writes ONE pattern-analysis report; it skips transcription and the three-artifact pipeline entirely.
 ---
 
 # Meeting Scribe -- Transcribe, Correct, Canvas, Summarize
@@ -14,6 +14,8 @@ Take a meeting **audio file** (or an already-transcribed `.txt`) that the user d
 3. A **summary** (Markdown, with an AI-insights section)
 
 Transcription runs **locally** via Whisper (no external app). The artifacts are written **directly to the configured output destination** -- never echoed in full to chat (echoing then writing generates the same content twice as output tokens and bloats context). The user reviews at the destination and requests edits there.
+
+**Two modes.** The pipeline above (Phases 0-5) is the default, one meeting in, three artifacts out. A second entry point, **Insights mode** (see its section after Phase 5), runs when the user asks about their communication patterns ACROSS meetings: it reads the corpus of already-corrected transcripts and writes one analysis report. Route by intent: "process this recording" -> pipeline; "what are my patterns in meetings" -> Insights mode. Never run both in one pass.
 
 All machine-specific behavior -- where audio lands, which Whisper model to use, where artifacts go, what language to write in -- comes from a per-user config file, NOT from this document. This skill is the orchestration logic only; it is portable across users and machines.
 
@@ -342,6 +344,61 @@ The user reviews the artifacts at the destination, not in chat. When they come b
 
 The loop stays token-lean: generate once into the file, edit in place, never reprint.
 
+## Insights mode -- cross-meeting pattern analysis
+
+A separate workflow from the per-meeting pipeline. Input = the corpus of **already-corrected transcripts** (never raw drop-zone `.txt`: corrected files have real names mapped and hallucinations cleaned). Output = **ONE report file**, written to the destination, never echoed in full. No transcription, no canvas, no summary.
+
+The subject of analysis is **the user's own communication behavior**. Other participants' words are context for reading the user's moves, never targets of judgement. Do not profile, score, or diagnose other people.
+
+### Step 1: Corpus discovery (silent)
+
+1. Read the config (same as Phase 0).
+2. Locate corrected transcripts by frontmatter: grep for `type: meeting-transcript` under the vault (obsidian mode; transcripts may have been promoted out of the landing folder, so search vault-wide) or under `output.folder_path` (folder mode).
+3. Build a one-line-per-meeting inventory: date, slug, meeting type, participants, speaker-attribution quality (diarized with named speakers / labeled-but-unmapped / no speaker labels).
+
+### Step 2: Scope gate (the only gate)
+
+One brief response: corpus stats (N meetings, date range, type mix), then ask two things and wait:
+
+- **Scope**: all, a date range, a meeting type (e.g. only 1-on-1s), or meetings with a specific person.
+- **Lenses**: which patterns to analyze (offer the catalog below; default = conflict avoidance + facilitation + question ratio if the user says "you pick").
+
+If the user's opening message already specifies both (e.g. "last month's meetings, tell me if I avoid conflict"), skip the gate and run.
+
+### Lens catalog
+
+Speaker-dependent lenses (marked ⊙) need reliable attribution: apply them only to transcripts where the user's turns are identifiable. Content lenses work on any transcript. Exclusions are reported, never silent.
+
+- **Conflict avoidance & hedging** -- hedged delivery of hard messages, agreeing-without-commitment, subject changes at tension points, problems visible in the transcript that never got named. Look for hedging markers in the transcript's language(s), e.g. EN "maybe / kind of / I think / whatever you think"; ZH "可能", "或者说", "看你们怎么想", "都可以", "再看吧". Register guard: casual particles, softeners, and emphatic repetition that belong to the configured `register` are register, NOT hedging; only flag when the CONTENT retreats, not when the tone is casual.
+- **⊙ Speaking ratio & turn-taking** -- share of words, average turn length, interruptions given/received (visible as turn breaks mid-thought). Diarization is turn-level, so treat counts as approximate; report direction, not false precision.
+- **⊙ Question vs statement ratio** -- and question quality: clarifying / exploring vs leading / rhetorical. Especially relevant to coaching calls and 1-on-1s, where question quality is the craft itself.
+- **Active listening** -- paraphrasing others, building on their points, referencing something said earlier vs steamrolling to one's own agenda.
+- **Facilitation & close discipline** -- directive vs collaborative decision moments, drawing out quiet participants, whether meetings end with clear owners + dates or trail off.
+- **Commitment integrity** (cross-meeting only, needs 2+ meetings with shared participants/topic) -- commitments made in meeting A: revisited, delivered, or silently dropped by meeting B? This is the lens no single-meeting AI-insights section can see, and the highest-value one in this mode.
+- **Trend compare** -- same lenses over two time windows ("Q1 vs Q2"), reported as movement with examples from each window.
+
+### Evidence discipline
+
+The pipeline's anti-fabrication rules apply, plus two stricter ones:
+
+1. **Pattern threshold**: a claim is a "pattern" only with 3+ instances across 2+ meetings. Fewer -> report it as an isolated observation, explicitly labeled.
+2. **Every instance cited**: meeting file + timestamp (if present) + verbatim quote in its original language. No quote, no claim.
+
+For each strong instance, include a **better-approach rewrite**: what a more direct version would have sounded like, written in the user's own voice (honor `language.register` if set), not textbook corporate phrasing. A rewrite the user would never actually say is useless.
+
+### Report artifact
+
+One file: `Meeting-Insights-YYYY-MM-DD-<scope-slug>.md` (date = today; scope slug e.g. `2026-06-one-on-ones`), written to the same destination as Phase 4. Structure:
+
+1. **Scope + corpus**: meetings analyzed, date range, which were excluded from ⊙ lenses and why.
+2. **Per-lens findings**: finding in one sentence -> frequency -> 2-3 strongest cited examples (quote + why it matters + better-approach rewrite).
+3. **Strengths**: 2-3, cited with the same rigor. Real evidence, not balance-for-politeness.
+4. **Growth moves**: 3-5 concrete behaviors, each tied to a finding. No platitudes.
+
+Then a compact chat report in the replies language, mirroring Phase 4 style: corpus stats, the single sharpest pattern (one line), strongest strength (one line), file path. Edits follow the Phase 5 loop: in place, no re-echo.
+
+Report language: `language.summary` + `register`. Quotes stay in their original language.
+
 ## Output 1: Visual canvas (HTML)
 
 A single self-contained HTML file. Goal: someone reads it for 60 seconds and walks away with the complete strategic picture, without opening the transcript or summary.
@@ -388,7 +445,8 @@ Load Inter + JetBrains Mono + Noto Sans SC from Google Fonts (allowlisted). Mono
 5. **Decisions**: rows, each = a numbered blue chip + decision text + a mono owner pill.
 6. **Action items**: a mono-headed table (#, Task, Owner, Due); due dates colored by urgency (near-term in blue); collapses to stacked rows under ~720px.
 7. **Open & Risk**: two flags side by side; `Open` neutral, `Risk` in red.
-8. **Footer**: the three-lane color legend + a one-line meeting tag.
+8. **AI Insights**: a hairline-divided stack that mirrors the summary's AI-insights section, condensed for glance. Each row = a mono `01` index in **amber** (the human / tension lane -- insights surface contradiction / tension; do NOT add a 4th accent) + a **bolded lead clause** + a 1-2 sentence body. 4-8 observations, ported and tightened from the summary's section 6, under the same anti-fabrication discipline (every insight traces to transcript / grounding). Sits as the analytical capstone, after Open & Risk and before the footer.
+9. **Footer**: the three-lane color legend + a one-line meeting tag.
 
 Content max-width ~960px, centered; the page background fills full width. Fully responsive per the template.
 

@@ -580,6 +580,13 @@
   }
   .flag-risk{border-color:var(--red-line);}
 
+  /* ============ AI Insights ============ */
+  .insights{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow);}
+  .insight{background:var(--bg-board); padding:20px 24px; display:grid; grid-template-columns:40px 1fr; gap:16px;}
+  .insight .i-no{font-family:var(--mono); font-size:12px; font-weight:700; color:var(--amber); padding-top:3px; letter-spacing:.02em;}
+  .insight .i-text{font-size:15px; line-height:1.6; color:var(--ink-2); margin:0;}
+  .insight .i-text strong{color:var(--ink); font-weight:600;}
+
   /* ============ Footer ============ */
   footer{
     margin-top:44px;
@@ -615,6 +622,8 @@
     .decision .d-owner{grid-column:2; justify-self:start;}
     .theme{grid-template-columns:1fr; gap:10px;}
     .theme .t-no{padding-top:0;}
+    .insight{grid-template-columns:1fr; gap:8px;}
+    .insight .i-no{padding-top:0;}
     thead th.col-owner,thead th.col-due,
     td.col-owner,td.col-due{display:none;}
     .mobile-meta{display:block;}
@@ -798,6 +807,27 @@
       <div class="flag flag-risk">
         <span class="f-label">Risk</span>
         <div class="f-body">The 40K budget has no agreed allocation method, easy to slip into an empty promise</div>
+      </div>
+    </div>
+
+    <!-- ============ AI INSIGHTS ============ -->
+    <div class="section-head">
+      <span class="idx">06</span>
+      <h2>AI Insights</h2>
+      <span class="rule"></span>
+    </div>
+    <div class="insights">
+      <div class="insight">
+        <div class="i-no">01</div>
+        <p class="i-text"><strong>The 40K is not the real problem, its missing definition is.</strong> Both teams agreed to commit the budget, but nobody defined what it buys or how spend gets tracked -- commitments without a quantified anchor are the ones that quietly slip.</p>
+      </div>
+      <div class="insight">
+        <div class="i-no">02</div>
+        <p class="i-text"><strong>The whole plan leans on the partner team joining, yet nobody confirmed they will.</strong> Scope, dates and owner assignments all assume their participation; that assumption was never tested in the meeting. If it fails, the sequence needs rework.</p>
+      </div>
+      <div class="insight">
+        <div class="i-no">03</div>
+        <p class="i-text"><strong>QA became the gating step while Sam's QA role stayed unscoped.</strong> Go-live now hinges on Priya's QA sign-off, but the one open staffing question in QA was parked without an owner or date -- the gate and the gap sit in the same lane.</p>
       </div>
     </div>
 
